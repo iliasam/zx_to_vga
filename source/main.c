@@ -1,4 +1,6 @@
-//zx scectrum capture
+//ZX Spectrum video signal to VGA converter
+//by ILIASAM
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "32f429_sdram.h"
@@ -26,10 +28,6 @@ extern volatile uint16_t captured_line_number;
 static void Delay(__IO uint32_t nTime);
 void init_gpio(void);
 uint16_t grayscale_to_rgb565(uint8_t value);
-void init_test_dac(void);
-
-
-void configure_sim_timer(void);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -53,13 +51,10 @@ int main(void)
   LCD_LayerInit();
   LTDC_Cmd(ENABLE);
   LCD_SetLayer(LCD_BACKGROUND_LAYER);
-  //LCD_SetLayer(LCD_FOREGROUND_LAYER);
-  
-  
   LCD_Clear(LCD_COLOR_BLACK);
   LCD_SetFont(&Font16x24);
   
-  //red bars
+  //red bars - test
   LCD_SetTextColor(LCD_COLOR_RED);
   for (i=0; i< 640; i+= 30)
   {
@@ -71,23 +66,20 @@ int main(void)
   LCD_DisplayStringLine(LINE(3), (uint8_t*)"ZX SPECTRUIM -> VGA");
   
   Delay(1000);
-  
-  
-  configure_sim_timer();
+ 
   init_capture_timer();
   init_time_measurement_timer();
   init_capture_dma();
-  init_test_dac();
-  init_data_pins();
+  init_video_data_pins();
   
   GPIO_SetBits(GPIOI, GPIO_Pin_7);//LED2
   
   LCD_Clear(LCD_COLOR_WHITE);
-  LCD_DrawRect(0, 0, RGB_CAPTURE_MAX_LINES+1, RGB_CAPTURE_IMAGE_WIDTH+1);
+  LCD_DrawRect(0, 0, RGB_CAPTURE_MAX_LINES+1, RGB_CAPTURE_IMAGE_WIDTH+1);//video zone
   
   uint16_t* display_buf = (uint16_t *)LCD_FRAME_BUFFER;
-  int16_t local_line_number = 0;
-  uint8_t* buf_ptr;
+  int16_t local_line_number = 0;//used to protect from changing "captured_line_number" in interrupt
+  uint8_t* buf_ptr;//pointer to the buffer with video data 
   
   while (1) 
   {
@@ -104,6 +96,8 @@ int main(void)
       uint16_t pixel_color = 0;
       uint16_t local_pix_number = 0;
       
+      uint32_t buffer_offset = local_line_number * LCD_PIXEL_WIDTH;
+      
       for (i=0; i<RGB_CAPTURE_IMAGE_WIDTH; i++)//i - y
       {
         pixel_color = 0;
@@ -118,18 +112,10 @@ int main(void)
         if (buf_ptr[local_pix_number] & RGB_CAPTURE_DATA_R_PIN)
           pixel_color|= LCD_COLOR_RED;
           
-        display_buf[local_line_number * LCD_PIXEL_WIDTH + i] = pixel_color;
+        display_buf[buffer_offset + i] = pixel_color;
       }
     }
   }
-  
-  /*
-  while(1)
-  {
-    uint16_t new_val = RGB_CAPTURE_TIM_NAME->CNT;
-    DAC_SetChannel1Data(DAC_Align_12b_R, new_val);
-  }
-  */
   
   
   /* Infinite loop */
@@ -178,72 +164,6 @@ void init_gpio(void)
   GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
   GPIO_Init(GPIOI, &GPIO_InitStructure);
 }
-
-//timer for generatng 15 khz signal
-//tim13_ch1 - PA6
-void configure_sim_timer(void)
-{
-  const uint16_t sim_timer_period = 100;
-  GPIO_InitTypeDef              GPIO_InitStructure;
-  TIM_TimeBaseInitTypeDef       TIM_TimeBaseStructure;
-  TIM_OCInitTypeDef             TIM_OCInitStructure;
-  
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM13, ENABLE);
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-  
-  GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_6;
-  GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP ;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
-  
-  GPIO_PinAFConfig(GPIOA, GPIO_PinSource6, GPIO_AF_TIM13);
-  
-  // Time base configuration
-  TIM_TimeBaseStructure.TIM_Period = sim_timer_period - 1;
-  TIM_TimeBaseStructure.TIM_Prescaler = ((SystemCoreClock / 2) / ((uint32_t)sim_timer_period * 15000) - 1);
-  TIM_TimeBaseStructure.TIM_ClockDivision = 0;
-  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-  TIM_TimeBaseInit(TIM13, &TIM_TimeBaseStructure);
-  TIM_OC1PreloadConfig(TIM13, TIM_OCPreload_Enable);
-  
-  TIM_OC1PreloadConfig(TIM13, TIM_OCPreload_Enable);
-  
-  // PWM1 Mode configuration: Channel1
-  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
-  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-  TIM_OCInitStructure.TIM_Pulse       = 10;
-  TIM_OCInitStructure.TIM_OCPolarity  = TIM_OCPolarity_High;
-  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-  TIM_OC1Init(TIM13, &TIM_OCInitStructure);
-  
-  TIM_ARRPreloadConfig(TIM13, ENABLE);
-  
-  TIM_Cmd(TIM13, ENABLE);
-}
-
-void init_test_dac(void)
-{
-  DAC_InitTypeDef  DAC_InitStructure;
-  GPIO_InitTypeDef              GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
-  
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_DAC, ENABLE);
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-  
-  DAC_StructInit(&DAC_InitStructure);
-  DAC_InitStructure.DAC_Trigger = DAC_Trigger_None;
-  DAC_InitStructure.DAC_WaveGeneration = DAC_WaveGeneration_None;
-  DAC_InitStructure.DAC_OutputBuffer = DAC_OutputBuffer_Disable;
-  DAC_Init(DAC_Channel_1, &DAC_InitStructure);
-  DAC_Cmd(DAC_Channel_1, ENABLE);
-}
-
-
 
 void Delay(__IO uint32_t nTime)
 { 

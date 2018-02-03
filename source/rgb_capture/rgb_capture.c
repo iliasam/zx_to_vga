@@ -1,3 +1,11 @@
+//Capturing ZX Spectrum video
+//Video signal (3 RGB lines) is captured by DMA
+//GPIO -> DMA -> Memory("capture_bufX")
+//DMA is triggered by timer "RGB_CAPTURE_TIM"
+//This timer is also used for measurement SYNC signal duty. This is used for detection
+//beginning start of the new frame.
+//Sync line must be connectet to CH1 of the timer
+
 #include "rgb_capture.h"
 #include "main.h"
 
@@ -8,21 +16,20 @@ volatile uint8_t prev_line_is_visual = 0;
 volatile uint8_t current_line_is_visual = 0;
 
 volatile uint16_t current_line_number = 0;
-volatile uint16_t lines_in_frame = 0;//Number of lines in frame - debug
+volatile uint16_t lines_in_frame = 0;//Number of lines in frame - for debug
 
 volatile uint8_t capture_buf0[RGB_CAPTURE_MAX_SAMPLES];
 volatile uint8_t capture_buf1[RGB_CAPTURE_MAX_SAMPLES];
-volatile uint8_t current_buf_capturing = 0;
+volatile uint8_t current_buf_capturing = 0;//Number of buffer tha is fillnig now
 
 volatile uint8_t new_line_is_captured = 0;//flag for external software
-volatile uint16_t captured_line_number = 0;
+volatile uint16_t captured_line_number = 0;//Number of the line that was captured
 
 void init_additional_timer(void);
-
 void RGB_CAPTURE_TIM_INT_FUNCION(void);
 void RGB_CAPTURE_DMA_FUNCION(void);
 
-//edge of sync input
+//Interrupt handler - edge of sync input
 void RGB_CAPTURE_TIM_INT_FUNCION(void)
 {
   //Rising edge
@@ -68,16 +75,12 @@ void RGB_CAPTURE_TIM_INT_FUNCION(void)
         asm("nop");//debug
       }
     }
-    
     prev_line_is_visual = current_line_is_visual;
-    
     current_line_number++;
-    
-
   }
-    
 }
 
+//Interrupt handler from DMA
 void RGB_CAPTURE_DMA_FUNCION(void)
 {
   if(DMA_GetITStatus(RGB_CAPTURE_DMA_STREAM, RGB_CAPTURE_DMA_TC_FLAG))
@@ -164,8 +167,6 @@ void init_capture_timer(void)
   
   TIM_ARRPreloadConfig(RGB_CAPTURE_TIM_NAME, ENABLE);
   TIM_Cmd(RGB_CAPTURE_TIM_NAME, ENABLE);
-  
-  //init_additional_timer();
 }
 
 //DMA transfer data from GPIO to memory
@@ -194,7 +195,6 @@ void init_capture_dma(void)
   DMA_InitStructure.DMA_PeripheralBurst         = DMA_PeripheralBurst_Single;
   DMA_Init(RGB_CAPTURE_DMA_STREAM, &DMA_InitStructure);
   
-  //for debug
   NVIC_InitStructure.NVIC_IRQChannel = RGB_CAPTURE_DMA_IRQ_CH;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 10;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 10;
@@ -232,7 +232,7 @@ void init_time_measurement_timer(void)
   TIM_Cmd(RGB_T_MEASURE_TIM_NAME, ENABLE);
 }
 
-void init_data_pins(void)
+void init_video_data_pins(void)
 {
   GPIO_InitTypeDef              GPIO_InitStructure;
   RCC_AHB1PeriphClockCmd(RGB_CAPTURE_DATA_PORT_CLK, ENABLE);
