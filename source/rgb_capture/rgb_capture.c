@@ -4,12 +4,12 @@
 //DMA is triggered by timer "RGB_CAPTURE_TIM"
 //This timer is also used for measurement SYNC signal duty. This is used for detection
 //beginning start of the new frame.
-//Sync line must be connectet to CH1 of the timer
+//Sync line must be connected to the CH1 of the timer
 
 #include "rgb_capture.h"
 #include "main.h"
 
-volatile uint16_t last_sync_period = 0;//line duration in uS - from rising to falling edge
+volatile uint16_t last_sync_period = 0;//Line duration in uS - from rising to falling edge
 
 //Flags that shows state of the captured line
 volatile uint8_t prev_line_is_visual = 0;
@@ -20,9 +20,9 @@ volatile uint16_t lines_in_frame = 0;//Number of lines in frame - for debug
 
 volatile uint8_t capture_buf0[RGB_CAPTURE_MAX_SAMPLES];
 volatile uint8_t capture_buf1[RGB_CAPTURE_MAX_SAMPLES];
-volatile uint8_t current_buf_capturing = 0;//Number of buffer tha is fillnig now
+volatile uint8_t current_buf_capturing = 0;//Number of buffer that is filling now
 
-volatile uint8_t new_line_is_captured = 0;//flag for external software
+volatile uint8_t new_line_is_captured = 0;//Flag for external software
 volatile uint16_t captured_line_number = 0;//Number of the line that was captured
 
 void init_additional_timer(void);
@@ -43,7 +43,7 @@ void RGB_CAPTURE_TIM_INT_FUNCION(void)
   if (TIM_GetITStatus(RGB_CAPTURE_TIM_NAME, TIM_IT_CC2) != RESET)
   {
     //Reset main capture timer.
-    //It would not count up till risign edge (it is confugured in gated mode)
+    //It would not count up till rising edge (it is configured in gated mode)
     RGB_CAPTURE_TIM_NAME->CNT = 0;
     last_sync_period = RGB_T_MEASURE_TIM_NAME->CNT;
     TIM_ClearITPendingBit(RGB_CAPTURE_TIM_NAME, TIM_IT_CC2);
@@ -58,7 +58,7 @@ void RGB_CAPTURE_TIM_INT_FUNCION(void)
       {
         lines_in_frame = current_line_number;
       }
-      current_line_number = 0;//this lines dont't count
+      current_line_number = 0;//this lines don't count
     }
     else
     {
@@ -80,7 +80,7 @@ void RGB_CAPTURE_TIM_INT_FUNCION(void)
   }
 }
 
-//Interrupt handler from DMA
+//Interrupt handler from the DMA
 void RGB_CAPTURE_DMA_FUNCION(void)
 {
   if(DMA_GetITStatus(RGB_CAPTURE_DMA_STREAM, RGB_CAPTURE_DMA_TC_FLAG))
@@ -121,7 +121,7 @@ void init_capture_timer(void)
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
   TIM_TimeBaseInit(RGB_CAPTURE_TIM_NAME, &TIM_TimeBaseStructure);
   
-  //Ch1 input is used to reset timer
+  //Ch1 input is used to stop timer
   TIM_ICInitStructure.TIM_Channel       = TIM_Channel_1;
   TIM_ICInitStructure.TIM_ICPolarity    = TIM_ICPolarity_Rising;
   TIM_ICInitStructure.TIM_ICSelection   = TIM_ICSelection_DirectTI;
@@ -144,7 +144,7 @@ void init_capture_timer(void)
   TIM_ICInitStructure.TIM_ICFilter = 0;
   TIM_ICInit(RGB_CAPTURE_TIM_NAME, &TIM_ICInitStructure);
   
-  // PWM1 Mode configuration: Channel3 - no output
+  // PWM1 Mode configuration: Channel3 - no output - used for generating DMA events
   TIM_OCInitTypeDef             TIM_OCInitStructure;
   TIM_OCInitStructure.TIM_OCMode      = TIM_OCMode_PWM1;
   TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Disable;
@@ -169,7 +169,7 @@ void init_capture_timer(void)
   TIM_Cmd(RGB_CAPTURE_TIM_NAME, ENABLE);
 }
 
-//DMA transfer data from GPIO to memory
+//DMA transfer data from the GPIO to the memory
 void init_capture_dma(void)
 {
   DMA_InitTypeDef DMA_InitStructure;
@@ -203,7 +203,7 @@ void init_capture_dma(void)
   DMA_ITConfig(RGB_CAPTURE_DMA_STREAM, DMA_IT_TC, ENABLE);
 }
 
-//Configure DMA for new capture
+//Configure DMA for a new capture
 void capture_dma_config(uint8_t* pointer)
 { 
   DMA_Cmd(RGB_CAPTURE_DMA_STREAM, DISABLE);

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define RGB_CAPTURE_MAX_SAMPLES         450 //captured pixels in line
+#define RGB_CAPTURE_MAX_SAMPLES         450 //Captured pixels in line
 #define RGB_CAPTURE_MAX_LINES           300 //Max lines captured
 #define RGB_CAPTURE_LEFT_OFFSET         60  //Left offset in pixels
 #define RGB_CAPTURE_IMAGE_WIDTH         (RGB_CAPTURE_MAX_SAMPLES - RGB_CAPTURE_LEFT_OFFSET)

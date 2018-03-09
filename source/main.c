@@ -46,7 +46,6 @@ int main(void)
   SDRAM_Init();
   Delay(5);
   
-  
   LCD_Init();
   LCD_LayerInit();
   LTDC_Cmd(ENABLE);
@@ -100,6 +99,7 @@ int main(void)
       
       for (i=0; i<RGB_CAPTURE_IMAGE_WIDTH; i++)//i - y
       {
+        //Convert captured signal to a pixel color
         pixel_color = 0;
         local_pix_number = i + RGB_CAPTURE_LEFT_OFFSET;
         
@@ -112,22 +112,9 @@ int main(void)
         if (buf_ptr[local_pix_number] & RGB_CAPTURE_DATA_R_PIN)
           pixel_color|= LCD_COLOR_RED;
           
-        display_buf[buffer_offset + i] = pixel_color;
+        display_buf[buffer_offset + i] = pixel_color;//Change framebuffer
       }
     }
-  }
-  
-  
-  /* Infinite loop */
-  while (1)
-  {
-    static uint16_t cnt = 0;
-    Delay(40);
-    sprintf(test_string, "TEST CNT: %d", cnt);
-    cnt++;
-
-    LCD_SetTextColor(LCD_COLOR_BLACK);
-    LCD_DisplayStringLine(LINE(0), (uint8_t*)test_string);
   }
 }
 

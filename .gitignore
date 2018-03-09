@@ -57,3 +57,4 @@ dkms.conf
 *.pbi
 *.pbd
 /Debug
+source/EWARM/STM32F429_439xx/Obj/Project.pbd.tmp
